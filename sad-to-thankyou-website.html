@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sad → Thank You (Animation + Kiss Sound)</title>
+  <style>
+    :root{--bg:#0f172a;--card:#0b1220;--accent:#ef476f;--muted:#94a3b8}
+    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans','Helvetica Neue',Arial}
+    body{display:grid;place-items:center;background:linear-gradient(180deg,#071025 0%, #0f172a 100%);color:#e6eef8}
+    .card{width:95%;max-width:720px;padding:28px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 10px 40px rgba(2,6,23,0.6);text-align:center}
+    h1{margin:0 0 8px;font-size:20px}
+    p{margin:0 0 18px;color:var(--muted)}
+
+    .controls{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+    button{appearance:none;border:0;padding:12px 18px;border-radius:12px;font-weight:600;background:linear-gradient(90deg,#ef476f,#ff8a5b);color:white;cursor:pointer;box-shadow:0 6px 24px rgba(239,71,111,0.18)}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#dbeafe}
+
+    .stage{height:320px;display:grid;place-items:center;position:relative;margin-top:20px}
+    .emoji{font-size:86px;transform-origin:center;transition:transform .35s ease}
+    .sad{filter:grayscale(.2);opacity:0.98}
+    .thank{position:absolute;top:18px;right:18px;background:linear-gradient(90deg,#22c55e,#16a34a);padding:10px 14px;border-radius:999px;font-weight:700;color:white;transform:translateY(-20px) scale(.85);opacity:0;transition:all .4s cubic-bezier(.2,.9,.3,1)}
+    .thank.show{opacity:1;transform:translateY(0) scale(1)}
+    .heart{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(0);pointer-events:none}
+    .heart svg{width:200px;height:200px;filter:drop-shadow(0 6px 18px rgba(239,71,111,0.28))}
+    .heart.pop{animation:pop .9s cubic-bezier(.2,.9,.3,1) forwards}
+    @keyframes pop{0%{transform:translate(-50%,-50%) scale(.0)}40%{transform:translate(-50%,-50%) scale(1.06)}100%{transform:translate(-50%,-50%) scale(1)}}
+    .confetti-piece{position:absolute;width:10px;height:18px;border-radius:2px;opacity:0;transform:translateY(-20px) rotate(0deg)}
+    .big-text{font-size:36px;font-weight:800;letter-spacing:0.3px;margin-top:6px;opacity:0;transform:translateY(8px);transition:all .45s ease}
+    .big-text.show{opacity:1;transform:translateY(0)}
+    .hint{margin-top:14px;color:var(--muted);font-size:13px}
+    @media (max-width:420px){.emoji{font-size:64px}.card{padding:18px}}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Sad → Thank You</h1>
+    <p>Jodi keu dukhkho pay, "I'm sad" button e dab korlei animation, "Thank you" text upore dekhabe ebong kiss sound bajbe.</p>
+
+    <div class="controls">
+      <button id="sadBtn">I'm sad</button>
+      <button id="resetBtn" class="ghost">Reset</button>
+    </div>
+
+    <div class="stage" aria-live="polite">
+      <div class="thank" id="thank">Thank you 💚</div>
+      <div class="emoji sad" id="emoji">😢</div>
+      <div class="heart" id="heart" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 21s-7-4.35-9-7.2C-0.2 8.95 4 4 7.5 6.5 9.6 8 12 10 12 10s2.4-2 4.5-3.5C20 4 24.2 8.95 21 13.8 19 16.65 12 21 12 21z" fill="#ef476f"/>
+        </svg>
+      </div>
+      <div id="confettiContainer" style="position:absolute;inset:0;pointer-events:none"></div>
+      <div class="big-text" id="bigText">You deserve a smile</div>
+    </div>
+
+    <div class="hint">Tip: open this page on mobile and add to home screen for quick access.</div>
+  </div>
+
+  <script>
+    const sadBtn = document.getElementById('sadBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const emoji = document.getElementById('emoji');
+    const thank = document.getElementById('thank');
+    const heart = document.getElementById('heart');
+    const confettiContainer = document.getElementById('confettiContainer');
+    const bigText = document.getElementById('bigText');
+
+    function playKissSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        const b = ctx.createBiquadFilter();
+        o.type = 'triangle';
+        o.frequency.value = 600;
+        b.type = 'highpass';
+        b.frequency.value = 500;
+        g.gain.value = 0.001;
+        const bufferSize = ctx.sampleRate * 0.08;
+        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        let data = noiseBuffer.getChannelData(0);
+        for (let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.pow(1 - i/data.length, 2);
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        const ng = ctx.createGain();
+        ng.gain.value = 0.06;
+
+        o.connect(b);
+        b.connect(g);
+        noise.connect(ng);
+        ng.connect(g);
+        g.connect(ctx.destination);
+
+        o.start();
+        noise.start();
+
+        g.gain.setValueAtTime(0.001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+
+        o.stop(ctx.currentTime + 0.22);
+        noise.stop(ctx.currentTime + 0.12);
+
+        setTimeout(()=>{ctx.close();},700);
+      } catch (e) { console.warn('Audio failed', e); }
+    }
+
+    function burstConfetti(count=22){
+      const colors = ['#ff8a5b','#ffd166','#06d6a0','#4cc9f0','#ef476f'];
+      const w = confettiContainer.clientWidth;
+      const h = confettiContainer.clientHeight;
+      for(let i=0;i<count;i++){
+        const el = document.createElement('div');
+        el.className = 'confetti-piece';
+        el.style.background = colors[Math.floor(Math.random()*colors.length)];
+        el.style.left = Math.random()*100 + '%';
+        el.style.top = Math.random()*100 + '%';
+        el.style.transform = `translateY(${ -30 - Math.random()*40 }px) rotate(${Math.random()*360}deg)`;
+        el.style.opacity = 1;
+        el.style.width = (6 + Math.random()*10)+'px';
+        el.style.height = (10 + Math.random()*18)+'px';
+        confettiContainer.appendChild(el);
+        const dy = 120 + Math.random()*240;
+        const dx = (Math.random()-0.5) * 300;
+        const rot = 360*(Math.random()*3+1);
+        el.animate([
+          {transform: `translate(${0}px, ${0}px) rotate(0deg)`, opacity:1},
+          {transform: `translate(${dx}px, ${dy}px) rotate(${rot}deg)`, opacity:0}
+        ], {duration: 700 + Math.random()*700, easing:'cubic-bezier(.2,.9,.3,1)'}).onfinish = ()=> el.remove();
+      }
+    }
+
+    function doComfortAction(){
+      emoji.textContent = '😊';
+      emoji.style.transform = 'scale(1.18)';
+      setTimeout(()=> emoji.style.transform = 'scale(1)', 420);
+      thank.classList.add('show');
+      heart.classList.add('pop');
+      bigText.classList.add('show');
+      burstConfetti(26);
+      playKissSound();
+      sadBtn.disabled = true;
+      sadBtn.style.opacity = 0.6;
+      setTimeout(()=>{ sadBtn.disabled=false; sadBtn.style.opacity = 1; }, 1800);
+    }
+
+    sadBtn.addEventListener('click', doComfortAction);
+    resetBtn.addEventListener('click', ()=>{
+      emoji.textContent = '😢';
+      heart.classList.remove('pop');
+      thank.classList.remove('show');
+      bigText.classList.remove('show');
+      confettiContainer.innerHTML = '';
+    });
+  </script>
+</body>
+</html>
